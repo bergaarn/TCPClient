@@ -9,28 +9,22 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-
 // Enable if you want debugging to be printed, see examble below.
 // Alternative, pass 
-#define DEBUG
+//#define DEBUG
 
 #define BUFFERSIZE 100
+#define PROTOCOL "TEXT TCP 1.0"
 
 // Included to get the support library
 #include "calcLib.h"
 
 int main(int argc, char *argv[]){
 
-  /*
-    Read first input, assumes <ip>:<port> syntax, convert into one string (Desthost) and one integer (port). 
-     Atm, works only on dotted notation, i.e. IPv4 and DNS. IPv6 does not work if its using ':'. 
-  */
-  
-  // Variables Declaration
   int errorStatus;
-  int msgBytes;
+  int recvBytes;
   int socketFD;
-  char msgBuffer[BUFFERSIZE];
+  char recvBuffer[BUFFERSIZE];
   char adressBuffer[INET_ADDRSTRLEN];
   char* terminalIP;
   char* terminalPort;
@@ -38,7 +32,7 @@ int main(int argc, char *argv[]){
   struct addrinfo hints;
   struct addrinfo* server;
   struct addrinfo* adressPointer;
-
+  
   if(argc != 2)
   {
     fprintf(stderr, "Program call was incorrect.\n");
@@ -86,22 +80,44 @@ int main(int argc, char *argv[]){
   inet_ntop(adressPointer->ai_family, adressPointer->ai_addr, adressBuffer, sizeof adressBuffer);
   freeaddrinfo(server);
 
-  msgBytes = recv(socketFD, msgBuffer, BUFFERSIZE-1, 0);
-  if(msgBytes == -1)
+  recvBytes = recv(socketFD, recvBuffer, BUFFERSIZE-1, 0);
+  if(recvBytes == -1)
   {
     return 4;
   }
-  msgBuffer[msgBytes] = '\0';
-  printf("%s\n", msgBuffer);
+  printf("%s", recvBuffer);
 
-  // Implement Send
+  char delimProtocol[] = "\n";
+  char* tcpOne = strtok(recvBuffer, delimProtocol);
 
+  if(tcpOne == PROTOCOL)
+  { 
+    char sendBuffer[] = "OK\n";
+    int length = strlen(sendBuffer);
 
+    send(socketFD, sendBuffer, length, 0);
+  }
+
+  else 
+  {
+    fprintf(stderr, "Incompatible Protocol.\n");
+    return 5;
+  }
+
+  recvBytes = recv(socketFD, recvBuffer, BUFFERSIZE-1, 0);
+  if (recvBytes == -1)
+  {
+    return 6;
+  }
+  printf("%s\n", recvBuffer);
+  
   close(socketFD);
 
-#ifdef DEBUG 
+  #ifdef DEBUG 
+
   printf("Host %s, and port %d.\n",terminalIP,portInt);
-#endif
+  
+  #endif
 
   
 }
