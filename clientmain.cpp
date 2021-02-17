@@ -54,9 +54,9 @@ int main(int argc, char *argv[]){
     return 2;
   }
 
-  for(adressPointer = server; server != NULL; server->ai_next)
+  for(adressPointer = server; adressPointer != NULL; adressPointer = adressPointer->ai_next)
   {
-    socketFD = socket(server->ai_family, server->ai_socktype, server->ai_protocol);
+    socketFD = socket(adressPointer->ai_family, adressPointer->ai_socktype, adressPointer->ai_protocol);
     if (socketFD == -1)
     {
       continue;
@@ -90,9 +90,10 @@ int main(int argc, char *argv[]){
   char delimProtocol[] = "\n";
   char* tcpOne = strtok(recvBuffer, delimProtocol);
 
-  if(tcpOne == PROTOCOL)
+  if(strcmp(tcpOne, PROTOCOL) != -1)
   { 
     char sendBuffer[] = "OK\n";
+    printf("%s\n", sendBuffer);
     int length = strlen(sendBuffer);
 
     send(socketFD, sendBuffer, length, 0);
@@ -104,6 +105,7 @@ int main(int argc, char *argv[]){
     return 5;
   }
 
+  memset(recvBuffer, 0, sizeof(recvBuffer));
   recvBytes = recv(socketFD, recvBuffer, BUFFERSIZE-1, 0);
   if (recvBytes == -1)
   {
@@ -111,6 +113,111 @@ int main(int argc, char *argv[]){
   }
   printf("%s\n", recvBuffer);
   
+  // Dissect String
+  char* operand;
+  char* firstValue;
+  char* secondValue;
+  char delimValues[] = " ";
+
+  operand = strtok(recvBuffer, delimValues);
+  firstValue = strtok(NULL, delimValues);
+  secondValue = strtok(NULL, "\n"); 
+ 
+  if(operand[0] == 'f')
+  {
+    // float values
+    double firstFloatValue = atof(firstValue);
+    double secondFloatValue = atof(secondValue);
+    double floatResult;
+    
+    if(operand[1] == 'a')
+    {
+      floatResult = firstFloatValue + secondFloatValue;
+      printf("%8.8g\n", floatResult);
+    }
+    else if(operand[1] == 'd')
+    {
+      floatResult = firstFloatValue - secondFloatValue;
+      printf("%8.8g\n", floatResult);
+    }
+
+    else if(operand[1] == 'm')
+    {
+      floatResult = firstFloatValue * secondFloatValue;
+      printf("%8.8g\n", floatResult);
+    }
+
+    else if(operand[1] == 's')
+    {
+      floatResult = firstFloatValue / secondFloatValue;
+      printf("%8.8g\n", floatResult);
+    }
+    else
+    {
+      fprintf(stderr, "Operand not Applicable");
+      return 7;
+    }
+
+    char floatBuffer[BUFFERSIZE];
+    sprintf(floatBuffer, "%8.8g\n", floatResult);
+    int floatLength = strlen(floatBuffer);
+    send(socketFD, floatBuffer, floatLength, 0);
+  }
+
+  else 
+  {
+    // integers
+    int firstIntValue = atoi(firstValue);
+    int secondIntValue = atoi(secondValue);
+    int intResult;
+    
+
+    if(operand[0] == 'a')
+    {
+      intResult = firstIntValue + secondIntValue;
+      printf("%d\n", intResult);
+    }
+    else if(operand[0] == 'd')
+    {
+      intResult = firstIntValue - secondIntValue;
+      printf("%d\n", intResult);
+    }
+
+    else if(operand[0] == 'm')
+    {
+      intResult = firstIntValue * secondIntValue;
+      printf("%d\n", intResult);
+    }
+
+    else if(operand[0] == 's')
+    {
+      intResult = firstIntValue / secondIntValue;
+      printf("%d\n", intResult);
+    }
+    else
+    {
+      fprintf(stderr, "Operand not Applicable");
+      return 8;
+    }
+    
+    char intBuffer[BUFFERSIZE];
+    sprintf(intBuffer, "%d\n", intResult);
+    int intLength = strlen(intBuffer);
+    send(socketFD, intBuffer, intLength, 0);
+  }
+  memset(recvBuffer, 0, sizeof(recvBuffer));
+  recvBytes = recv(socketFD, recvBuffer, BUFFERSIZE-1, 0);
+  if (recvBytes == -1)
+  {
+    return 9;
+  }
+  printf("%s\n", recvBuffer);
+
+  // Receive OK or ERROR
+  //printf("%s %d %d\n", operand, firstIntValue, secondIntValue);
+  //printf("%s %8.8g %8.8g\n", operand, firstFloatValue, secondFloatValue);
+
+
   close(socketFD);
 
   #ifdef DEBUG 
@@ -118,6 +225,4 @@ int main(int argc, char *argv[]){
   printf("Host %s, and port %d.\n",terminalIP,portInt);
   
   #endif
-
-  
 }
