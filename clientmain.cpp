@@ -46,7 +46,7 @@ int main(int argc, char *argv[]){
 
   memset(&hints, 0, sizeof hints);
   hints.ai_family = AF_INET;
-  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_socktype = SOCK_DGRAM;
 
   terminalIP = strtok(argv[1], delim);
   terminalPort = strtok(NULL, delim);
@@ -88,8 +88,10 @@ int main(int argc, char *argv[]){
     struct sockaddr_in myAddress;
     memset(&myAddress, 0, sizeof(myAddress));
     int myLength = sizeof(myAddress);
-
-    getsockname(socketFD, (struct sockaddr*)&myAddress, &myAddress.sin_addr.s_addr);
+    // socklen_t 
+    // size of
+    socklen_t len = sizeof myAddress;
+    getsockname(socketFD, (struct sockaddr*)&myAddress, &len);
     inet_ntop(AF_INET, &myAddress.sin_addr.s_addr, localIP, sizeof(localIP));
     
     printf("Connected to Server. My Local IP is: %s\n", localIP);
