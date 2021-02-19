@@ -8,15 +8,13 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+// Included to get the support library
+#include <calcLib.h>
 
-// Enable if you want debugging to be printed, see examble below.
-// Alternative, pass 
 #define DEBUG
 #define BUFFERSIZE 100
 #define PROTOCOL "TEXT TCP 1.0"
 
-// Included to get the support library
-#include <calcLib.h>
 
 int main(int argc, char *argv[]){
 
@@ -46,7 +44,7 @@ int main(int argc, char *argv[]){
 
   memset(&hints, 0, sizeof hints);
   hints.ai_family = AF_INET;
-  hints.ai_socktype = SOCK_DGRAM;
+  hints.ai_socktype = SOCK_STREAM;
 
   terminalIP = strtok(argv[1], delim);
   terminalPort = strtok(NULL, delim);
@@ -88,11 +86,9 @@ int main(int argc, char *argv[]){
     struct sockaddr_in myAddress;
     memset(&myAddress, 0, sizeof(myAddress));
     int myLength = sizeof(myAddress);
-    // socklen_t 
-    // size of
     socklen_t len = sizeof myAddress;
     getsockname(socketFD, (struct sockaddr*)&myAddress, &len);
-    inet_ntop(AF_INET, &myAddress.sin_addr.s_addr, localIP, sizeof(localIP));
+    inet_ntop(AF_INET, &myAddress, localIP, sizeof(localIP));
     
     printf("Connected to Server. My Local IP is: %s\n", localIP);
  
