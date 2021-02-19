@@ -90,7 +90,7 @@ int main(int argc, char *argv[]){
     getsockname(socketFD, (struct sockaddr*)&myAddress, &len);
     inet_ntop(AF_INET, &myAddress, localIP, sizeof(localIP));
     
-    printf("Connected to Server. My Local IP is: %s\n", localIP);
+    printf("Connected to Server. My Local IP is: %s:%d\n", localIP, ntohs(myAddress.sin_port));
  
   }
 
