@@ -1,37 +1,70 @@
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
+#include <sys/time.h>
+
 /* You will to add includes here */
 
 
 // Included to get the support library
 #include <calcLib.h>
 
-// Enable if you want debugging to be printed, see examble below.
-// Alternative, pass argument during compilation '-DDEBUG'
-#define DEBUG
+#include "protocol.h"
 
 
 using namespace std;
+/* Needs to be global, to be rechable by callback and main */
+int loopCount=0;
+int terminate=0;
+
+
+/* Call back function, will be called when the SIGALRM is raised when the timer expires. */
+void checkJobbList(int signum){
+  // As anybody can call the handler, its good coding to check the signal number that called it.
+
+  printf("Let me be, I want to sleep.\n");
+
+  if(loopCount>20){
+    printf("I had enough.\n");
+    terminate=1;
+  }
+  
+  return;
+}
+
+
+
 
 
 int main(int argc, char *argv[]){
   
-  /*
-    Read first input, assumes <ip>:<port> syntax, convert into one string (Desthost) and one integer (port). 
-     Atm, works only on dotted notation, i.e. IPv4 and DNS. IPv6 does not work if its using ':'. 
+  /* Do more magic */
+
+
+  /* 
+     Prepare to setup a reoccurring event every 10s. If it_interval, or it_value is omitted, it will be a single alarm 10s after it has been set. 
   */
-  char delim[]=":";
-  char *Desthost=strtok(argv[1],delim);
-  char *Destport=strtok(NULL,delim);
-  // *Desthost now points to a sting holding whatever came before the delimiter, ':'.
-  // *Dstport points to whatever string came after the delimiter. 
+  struct itimerval alarmTime;
+  alarmTime.it_interval.tv_sec=10;
+  alarmTime.it_interval.tv_usec=10;
+  alarmTime.it_value.tv_sec=10;
+  alarmTime.it_value.tv_usec=10;
 
-  /* Do magic */
-  int port=atoi(Destport);
-#ifdef DEBUG  
-  printf("Host %s, and port %d.\n",Desthost,port);
-#endif
+  /* Regiter a callback function, associated with the SIGALRM signal, which will be raised when the alarm goes of */
+  signal(SIGALRM, checkJobbList);
+  setitimer(ITIMER_REAL,&alarmTime,NULL); // Start/register the alarm. 
+
+  
+  while(terminate==0){
+    printf("This is the main loop, %d time.\n",loopCount);
+    sleep(1);
+    loopCount++;
+  }
+
+  printf("done.\n");
+  return(0);
 
 
+  
 }
