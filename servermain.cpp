@@ -12,9 +12,8 @@
 
 using namespace std;
 
-#define SERVPROTOCOL "TEXT TCP 1.0"
+#define SERVPROTOCOL "TEXT TCP 1.0\n\n"
 #define DEBUG
-
 
 int main(int argc, char *argv[]){
  
@@ -41,15 +40,42 @@ int main(int argc, char *argv[]){
   int rv;
   int sockFD;
   int servPortInt = atoi(servPort);
-  int clientBacklog = 5;
+  int reUse = 1;
+  struct addrinfo hints;
+  struct addrinfo* server;
+  struct addrinfo* p;
   
-  // Create Socket
-  sockFD = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if(sockFD == -1)
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_family = AF_INET;
+  hints.ai_socktype = SOCK_STREAM;
+  
+  rv = getaddrinfo(servPort, servPort, &hints, &server);
+  if(rv != 0)
   {
-    fprintf(stderr, "Error Socket Creation.\n");
-    return 3;
+    fprintf(stderr, "Error: getaddrinfo: %s\n", gai_strerror(rv));
+    return 2;
   }
+
+  for(p = server; p != NULL; p = p->ai_next)
+  {
+    // Create Socket
+    sockFD = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+    if(sockFD == -1)
+    {
+      fprintf(stderr, "Error Socket Creation.\n");
+      return 3;
+    }
+
+    // Socket options REUSE
+    rv = setsockopt(sockFD, SOL_SOCKET, SO_REUSEADDR, &reUse, sizeof(reUse));
+    if(rv == -1)
+    {
+      perror("Error SO_OPTIONS");
+      exit(1);
+    }
+  }
+  
+  freeaddrinfo(server);
 
   // Create Server
   struct sockaddr_in servAddr;
@@ -57,15 +83,6 @@ int main(int argc, char *argv[]){
   servAddr.sin_family = AF_INET;
   servAddr.sin_port = htons(servPortInt);
   inet_aton(servHost, &servAddr.sin_addr);
-
-  // Socket options REUSE
-  int reUse = 1;
-  rv = setsockopt(sockFD, SOL_SOCKET, SO_REUSEADDR, &reUse, sizeof(reUse));
-  if(rv == -1)
-  {
-    perror("Error SO_OPTIONS");
-    exit(1);
-  }
 
   // Bind Socket and Server
   rv = bind(sockFD, (struct sockaddr*)&servAddr, sizeof(servAddr));
@@ -76,8 +93,9 @@ int main(int argc, char *argv[]){
   }
 
   // Listen to incoming connections on IP:PORT
-  printf("Listening to %s:%d\n",inet_ntoa(servAddr.sin_addr), servPortInt);
-
+  printf("Listening to %s:%d\n", inet_ntoa(servAddr.sin_addr), servPortInt);
+  
+  int clientBacklog = 5;
   rv = listen(sockFD, clientBacklog);
   if(rv == -1)
   {
@@ -90,7 +108,7 @@ int main(int argc, char *argv[]){
   struct sockaddr_in clientAddr;
   memset(&clientAddr, 0, sizeof(clientAddr));
   socklen_t clientLen = sizeof(clientAddr);
-  char buff[1495];
+  char buff[20];
 
 
   // Loop to accept incoming client calls
@@ -108,6 +126,21 @@ int main(int argc, char *argv[]){
     // If client is accepted, enter a nested loop for communication
     while(1)
     {
+      memset(&buff, 0, sizeof(buff));
+      sprintf(buff, SERVPROTOCOL);
+      
+      // Send to Client
+      sv = send(clientSockFD, &buff, sizeof(buff), 0);
+      if(sv == -1)
+      {
+        perror("Error Sending");
+        break;
+      }
+      else if(sv == 0)
+      {
+        printf("Sent 0 Bytes\n");
+        break;
+      }
 
       // Recieve from client
       memset(&buff, 0, sizeof(buff));
@@ -120,12 +153,58 @@ int main(int argc, char *argv[]){
       else if(rv == 0)
       {
         printf("Recieved 0 Bytes\n");
+        break;
       }
       else 
       {
         printf("Client: <%d bytes> %s", rv, buff);
+         
+        if(strcmp(buff, "OK\n") == 0)
+        {
+          printf("Client Sent OK!\n");
+          // Send Calc
+        }
+        else
+        {
+          printf("No matching protocol, disconnect client.\n");
+          break;
+        }
       }
 
+      memset(&buff, 0, sizeof(buff));
+
+      // Math stuff
+
+
+
+
+
+
+
+
+      sv = send(clientSockFD, buff, sizeof(buff), 0);
+      if(sv == -1)
+      {
+        perror("Error Sending");
+        break;
+      }
+      else if(sv == 0)
+      {
+        printf("Sent 0 Bytes.\n");
+        break;
+      }
+      else
+      {
+        printf("Mathematical operation sent.\n");
+      }
+
+
+
+
+
+
+
+/*    
       // Send to Client
       sv = send(clientSockFD, &buff, rv, 0);
       if(sv == -1)
@@ -146,10 +225,10 @@ int main(int argc, char *argv[]){
       {
         //printf("Server: <%d bytes> %s\n", sv, buff);
       }
+*/
     }
     close(clientSockFD);
   }
- 
   close(sockFD);
   return 0;
 }
