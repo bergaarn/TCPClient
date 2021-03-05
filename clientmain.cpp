@@ -8,11 +8,12 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <errno.h>
 // Included to get the support library
 #include <calcLib.h>
 
-#define DEBUG
-#define BUFFERSIZE 100
+//#define DEBUG
+#define BUFFERSIZE 1450
 #define PROTOCOL "TEXT TCP 1.0"
 
 
@@ -36,7 +37,7 @@ int main(int argc, char *argv[]){
     return 1;
   }
 
-  if(strlen(argv[1]) < 13)
+  if(strlen(argv[1]) < 12)
   {
     fprintf(stderr, "No Port Found.\n");
     return 1;
@@ -85,19 +86,22 @@ int main(int argc, char *argv[]){
     char localIP[INET_ADDRSTRLEN];
     struct sockaddr_in myAddress;
     memset(&myAddress, 0, sizeof(myAddress));
-    int myLength = sizeof(myAddress);
     socklen_t len = sizeof myAddress;
     getsockname(socketFD, (struct sockaddr*)&myAddress, &len);
     inet_ntop(AF_INET, &myAddress, localIP, sizeof(localIP));
     
+
+    #ifdef DEBUG 
+    printf("Host %s, and port %d.\n",terminalIP,portInt);
+    #endif
+
     printf("Connected to Server. My Local IP is: %s:%d\n", localIP, ntohs(myAddress.sin_port));
- 
   }
 
   inet_ntop(addressPointer->ai_family, addressPointer->ai_addr, addressBuffer, sizeof addressBuffer);
   freeaddrinfo(server);
 
-  recvBytes = recv(socketFD, recvBuffer, BUFFERSIZE-1, 0);
+  recvBytes = recv(socketFD, &recvBuffer, sizeof(recvBuffer), 0);
   if(recvBytes == -1)
   {
     return 4;
@@ -107,15 +111,18 @@ int main(int argc, char *argv[]){
   char delimProtocol[] = "\n";
   char* tcpOne = strtok(recvBuffer, delimProtocol);
 
-  if(strcmp(tcpOne, PROTOCOL) != -1)
+  if(strcmp(tcpOne, PROTOCOL) == 0)
   { 
-    char sendBuffer[] = "OK\n";
+    char sendBuffer[BUFFERSIZE] = "OK\n";
     printf("%s\n", sendBuffer);
     int length = strlen(sendBuffer);
 
-    send(socketFD, sendBuffer, length, 0);
+    int rv = send(socketFD, &sendBuffer, length, 0);
+    if(rv == -1)
+    {
+      perror("send error");
+    }
   }
-
   else 
   {
     fprintf(stderr, "Incompatible Protocol.\n");
@@ -123,13 +130,23 @@ int main(int argc, char *argv[]){
   }
 
   memset(recvBuffer, 0, sizeof(recvBuffer));
-  recvBytes = recv(socketFD, recvBuffer, BUFFERSIZE-1, 0);
+  recvBytes = recv(socketFD, &recvBuffer, BUFFERSIZE-1, 0);
   if (recvBytes == -1)
   {
     return 6;
   }
+  else if(recvBytes == 0)
+  {
+    fprintf(stderr, "Recieved 0 bytes\n");
+    return 6;
+  }
+  else 
+  {
+    #ifdef DEBUG 
+    printf("Recieved: %d bytes", recvBytes);
+    #endif 
+  }
   printf("%s\n", recvBuffer);
-  
   char* operand;
   char* firstValue;
   char* secondValue;
@@ -176,7 +193,7 @@ int main(int argc, char *argv[]){
     char floatBuffer[BUFFERSIZE];
     sprintf(floatBuffer, "%8.8g\n", floatResult);
     int floatLength = strlen(floatBuffer);
-    send(socketFD, floatBuffer, floatLength, 0);
+    send(socketFD, &floatBuffer, floatLength, 0);
   }
   else 
   {
@@ -190,7 +207,7 @@ int main(int argc, char *argv[]){
       intResult = firstIntValue + secondIntValue;
       printf("%d\n", intResult);
     }
-    else if(operand[0] == 'd')
+    else if(operand[0] == 's')
     {
       intResult = firstIntValue - secondIntValue;
       printf("%d\n", intResult);
@@ -202,7 +219,7 @@ int main(int argc, char *argv[]){
       printf("%d\n", intResult);
     }
 
-    else if(operand[0] == 's')
+    else if(operand[0] == 'd')
     {
       intResult = firstIntValue / secondIntValue;
       printf("%d\n", intResult);
@@ -216,22 +233,26 @@ int main(int argc, char *argv[]){
     char intBuffer[BUFFERSIZE];
     sprintf(intBuffer, "%d\n", intResult);
     int intLength = strlen(intBuffer);
-    send(socketFD, intBuffer, intLength, 0);
+    send(socketFD, &intBuffer, intLength, 0);
   }
 
   memset(recvBuffer, 0, sizeof(recvBuffer));
-  recvBytes = recv(socketFD, recvBuffer, BUFFERSIZE-1, 0);
+  recvBytes = recv(socketFD, &recvBuffer, sizeof(recvBuffer), 0);
   if (recvBytes == -1)
   {
+    perror("recv final OK");
     return 9;
   }
-  printf("%s\n", recvBuffer);
-  
+  else if(recvBytes == 0)
+  {
+    fprintf(stderr, "Recieved 0 bytes\n");
+    return 9;
+  }
+  else 
+  {
+    printf("[%s]\n", recvBuffer);
+  }
   close(socketFD);
 
-  #ifdef DEBUG 
-
-  printf("Host %s, and port %d.\n",terminalIP,portInt);
-  
-  #endif
+  return 0;
 }
