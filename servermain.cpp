@@ -93,8 +93,10 @@ int main(int argc, char *argv[]){
   }
 
   // Listen to incoming connections on IP:PORT
+  #ifdef DEBUG
   printf("Listening to %s:%d\n", inet_ntoa(servAddr.sin_addr), servPortInt);
-  
+  #endif
+
   int clientBacklog = 5;
   rv = listen(sockFD, clientBacklog);
   if(rv == -1)
@@ -108,7 +110,7 @@ int main(int argc, char *argv[]){
   struct sockaddr_in clientAddr;
   memset(&clientAddr, 0, sizeof(clientAddr));
   socklen_t clientLen = sizeof(clientAddr);
-  char buff[20];
+  char buff[1450];
 
 
   // Loop to accept incoming client calls
@@ -121,7 +123,7 @@ int main(int argc, char *argv[]){
       continue;
     }
 
-    printf("[Client Accepted]\n");
+    printf("Client Accepted\n");
 
     // If client is accepted, enter a nested loop for communication
     while(1)
@@ -157,32 +159,97 @@ int main(int argc, char *argv[]){
       }
       else 
       {
-        printf("Client: <%d bytes> %s", rv, buff);
-         
-        if(strcmp(buff, "OK\n") == 0)
-        {
-          printf("Client Sent OK!\n");
-          // Send Calc
-        }
-        else
+        #ifdef DEBUG
+        printf("%s\n", buff);
+        #endif
+
+        if(strcmp(buff, "OK\n") != 0)
         {
           printf("No matching protocol, disconnect client.\n");
           break;
         }
       }
 
+      // Clear Buffer for new entries and Generate Numbers for Operation
       memset(&buff, 0, sizeof(buff));
+      initCalcLib();
+      char* typeHolder;
+      typeHolder = randomType();
 
-      // Math stuff
+      int fInt;
+      int sInt;
+      int rInt;
 
+      double fDouble;
+      double sDouble;
+      double rDouble;
+      
+      if(typeHolder[0] == 'f')
+      {
+        fDouble = randomFloat();
+        sDouble = randomFloat();
 
+        if(strcmp(typeHolder, "fadd") == 0)
+        {
+          rDouble = fDouble + sDouble;
+        }
+        else if(strcmp(typeHolder, "fsub") == 0)
+        {
+          rDouble = fDouble - sDouble;
+        }
+        else if(strcmp(typeHolder, "fmul") == 0)
+        {
+          rDouble = fDouble * sDouble;
+        }
+        else if(strcmp(typeHolder, "fdiv") == 0)
+        {
+          rDouble = fDouble / sDouble;
+        }
+        else 
+        {
+          printf("Error with typeHolder DOUBLE\n");
+        }
 
+        // Print Math operation on server side
+        printf("%s %8.8g %8.8g\n", typeHolder, fDouble, sDouble);
 
+        // Fill buffer with the operation for sending to client
+        sprintf(buff, "%s %8.8g %8.8g\n", typeHolder, fDouble, sDouble);
+      }
+      else
+      {
+        fInt = randomInt();
+        sInt = randomInt();
 
+        if(strcmp(typeHolder, "add") == 0)
+        {
+          rInt = fInt + sInt;
+        }
+        else if(strcmp(typeHolder, "sub") == 0)
+        {
+          rInt = fInt - sInt;
+        }
+        else if(strcmp(typeHolder, "mul") == 0)
+        {
+          rInt = fInt * sInt;
+        }
+        else if(strcmp(typeHolder, "div") == 0)
+        {
+          rInt = fInt / sInt;
+        }
+        else 
+        {
+          printf("Error with typeHolder INT\n");
+        }
 
+        // Print Math operation on server side
+        printf("%s %d %d\n", typeHolder, fInt, sInt);
 
+        // Fill buffer with the operation for sending to client
+        sprintf(buff, "%s %d %d\n", typeHolder, fInt, sInt);
+      }
 
-      sv = send(clientSockFD, buff, sizeof(buff), 0);
+      sv = send(clientSockFD, &buff, sizeof(buff), 0);
       if(sv == -1)
       {
         perror("Error Sending");
@@ -195,40 +262,112 @@ int main(int argc, char *argv[]){
       }
       else
       {
+        #ifdef DEBUG
         printf("Mathematical operation sent.\n");
+        #endif
       }
 
-
-
-
-
-
-
-/*    
-      // Send to Client
-      sv = send(clientSockFD, &buff, rv, 0);
-      if(sv == -1)
+      memset(&buff, 0, sizeof(buff));
+      rv = recv(clientSockFD, &buff, sizeof(buff), 0);
+      if(rv == -1)
       {
-        perror("Error Sending");
+        perror("recv client answer");
         break;
       }
-      else if(sv == 0)
+      else if(rv == 0)
       {
-        printf("Sent 0 Bytes\n");
+        printf("Recv 0 bytes.\n");
         break;
-      }
-      else if(rv != sv)
-      {
-        printf("Expected to send %d, actually sent %d\n", rv, sv);
       }
       else 
       {
-        //printf("Server: <%d bytes> %s\n", sv, buff);
+        bool equal = false;
+        
+        if(typeHolder[0] == 'f')
+        {
+          double diff;
+          double clientDouble = atof(buff);
+          
+          #ifdef DEBUG
+          printf("client answer: %8.8g | server answer: %8.8g\n", clientDouble, rDouble);
+          #endif
+
+          diff = abs(clientDouble - rDouble);
+
+          if(diff < 0.0001)
+          {
+            #ifdef DEBUG
+            printf("Equal D\n");
+            #endif
+
+            equal = true;
+          }
+          else 
+          {
+            #ifdef DEBUG
+            printf("Not Equal D\n");
+            #endif
+
+            equal = false;
+          }
+        }
+        else
+        {
+          int clientInt = atoi(buff);
+          
+          #ifdef DEBUG
+          printf("client answer: %d | server answer: %d\n", clientInt, rInt);
+          #endif
+          
+          if(clientInt == rInt)
+          {
+            #ifdef DEBUG
+            printf("Equal I\n");
+            #endif
+
+            equal = true;
+          }
+          else 
+          {
+            #ifdef DEBUG
+            printf("Not Equal I\n");
+            #endif
+
+            equal = false;
+          }
+        }
+
+        memset(&buff, 0, sizeof(buff));
+        if(equal)
+        {
+          sprintf(buff, "OK\n");
+        }
+        else 
+        {
+          sprintf(buff, "ERROR\n");
+        }
+        
+        sv = send(clientSockFD, &buff, sizeof(buff), 0);
+        if(sv == -1)
+        {
+          perror("Server Calc Response");
+          break;
+        }
+        else if(sv == 0)
+        {
+          printf("Sent 0 bytes\n");
+          break;
+        }
+        else
+        {
+          printf("%s", buff);
+        }
+        printf("Terminating Client.\n");
+        break;
       }
-*/
     }
     close(clientSockFD);
   }
-  close(sockFD);
+  close(sockFD); 
   return 0;
 }
