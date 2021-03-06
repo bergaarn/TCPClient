@@ -13,6 +13,7 @@
 using namespace std;
 
 #define SERVPROTOCOL "TEXT TCP 1.0\n\n"
+#define BUFFERSIZE 1450
 #define DEBUG
 
 int main(int argc, char *argv[]){
@@ -110,7 +111,7 @@ int main(int argc, char *argv[]){
   struct sockaddr_in clientAddr;
   memset(&clientAddr, 0, sizeof(clientAddr));
   socklen_t clientLen = sizeof(clientAddr);
-  char buff[1450];
+  char buff[BUFFERSIZE];
 
 
   // Loop to accept incoming client calls
@@ -123,13 +124,16 @@ int main(int argc, char *argv[]){
       continue;
     }
 
+    #ifdef DEBUG
     printf("Client Accepted\n");
+    #endif
 
     // If client is accepted, enter a nested loop for communication
     while(1)
     {
       memset(&buff, 0, sizeof(buff));
       sprintf(buff, SERVPROTOCOL);
+      printf("%s", buff);
       
       // Send to Client
       sv = send(clientSockFD, &buff, sizeof(buff), 0);
@@ -159,9 +163,7 @@ int main(int argc, char *argv[]){
       }
       else 
       {
-        #ifdef DEBUG
         printf("%s\n", buff);
-        #endif
 
         if(strcmp(buff, "OK\n") != 0)
         {
@@ -340,11 +342,13 @@ int main(int argc, char *argv[]){
         memset(&buff, 0, sizeof(buff));
         if(equal)
         {
-          sprintf(buff, "OK\n");
+          char validate[BUFFERSIZE] = "OK\n";
+          sprintf(buff, "%s", validate);
         }
-        else 
+        else
         {
-          sprintf(buff, "ERROR\n");
+          char unvalidate[BUFFERSIZE] = "ERROR\n";
+          sprintf(buff, "%s", unvalidate);
         }
         
         sv = send(clientSockFD, &buff, sizeof(buff), 0);
@@ -355,14 +359,18 @@ int main(int argc, char *argv[]){
         }
         else if(sv == 0)
         {
-          printf("Sent 0 bytes\n");
+          fprintf(stderr, "Sent 0 bytes\n");
           break;
         }
         else
         {
-          printf("%s", buff);
-        }
+          printf("%s\n", buff);
+        } 
+
+        #ifdef DEBUG
         printf("Terminating Client.\n");
+        #endif
+
         break;
       }
     }
