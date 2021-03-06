@@ -12,7 +12,7 @@
 // Included to get the support library
 #include <calcLib.h>
 
-//#define DEBUG
+#define DEBUG
 #define BUFFERSIZE 1450
 #define PROTOCOL "TEXT TCP 1.0"
 
@@ -129,7 +129,7 @@ int main(int argc, char *argv[]){
     return 5;
   }
 
-  memset(recvBuffer, 0, sizeof(recvBuffer));
+  memset(&recvBuffer, 0, sizeof(recvBuffer));
   recvBytes = recv(socketFD, &recvBuffer, BUFFERSIZE-1, 0);
   if (recvBytes == -1)
   {
@@ -143,7 +143,7 @@ int main(int argc, char *argv[]){
   else 
   {
     #ifdef DEBUG 
-    printf("Recieved: %d bytes", recvBytes);
+    printf("Recieved: %d bytes\n", recvBytes);
     #endif 
   }
   printf("%s\n", recvBuffer);
@@ -236,21 +236,24 @@ int main(int argc, char *argv[]){
     send(socketFD, &intBuffer, intLength, 0);
   }
 
-  memset(recvBuffer, 0, sizeof(recvBuffer));
-  recvBytes = recv(socketFD, &recvBuffer, sizeof(recvBuffer), 0);
-  if (recvBytes == -1)
-  {
+  int sv;
+  char buff[BUFFERSIZE];
+
+  memset(&buff, 0, sizeof(buff));
+  sv = recv(socketFD, &buff, sizeof(buff), 0);
+  if (sv == -1)
+  { 
     perror("recv final OK");
     return 9;
   }
-  else if(recvBytes == 0)
+  else if(sv == 0)
   {
     fprintf(stderr, "Recieved 0 bytes\n");
     return 9;
   }
   else 
   {
-    printf("[%s]\n", recvBuffer);
+    printf("[%s]\n", buff);
   }
   close(socketFD);
 
