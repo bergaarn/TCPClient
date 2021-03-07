@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <calcLib.h>
+#include <sys/time.h>
 
 using namespace std;
 
@@ -113,6 +114,9 @@ int main(int argc, char *argv[]){
   socklen_t clientLen = sizeof(clientAddr);
   char buff[BUFFERSIZE];
 
+  struct timeval timeout;
+  timeout.tv_sec = 5;
+  timeout.tv_usec = 0;
 
   // Loop to accept incoming client calls
   while(1)
@@ -128,9 +132,15 @@ int main(int argc, char *argv[]){
     printf("Client Accepted\n");
     #endif
 
+    if(setsockopt(clientSockFD, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0)
+    {
+      perror("sockopt");
+      break;
+    }
+
     // If client is accepted, enter a nested loop for communication
     while(1)
-    {
+    { 
       memset(&buff, 0, sizeof(buff));
       sprintf(buff, SERVPROTOCOL);
       printf("%s", buff);
