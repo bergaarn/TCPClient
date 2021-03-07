@@ -130,7 +130,7 @@ int main(int argc, char *argv[]){
   }
 
   memset(&recvBuffer, 0, sizeof(recvBuffer));
-  recvBytes = recv(socketFD, &recvBuffer, BUFFERSIZE-1, 0);
+  recvBytes = recv(socketFD, &recvBuffer, BUFFERSIZE, 0);
   if (recvBytes == -1)
   {
     return 6;
@@ -236,25 +236,29 @@ int main(int argc, char *argv[]){
     send(socketFD, &intBuffer, intLength, 0);
   }
 
-  int sv;
-  char buff[BUFFERSIZE];
-
-  memset(&buff, 0, sizeof(buff));
-  sv = recv(socketFD, &buff, sizeof(buff), 0);
-  if (sv == -1)
-  { 
-    perror("recv final OK");
-    return 9;
+  
+  memset(&recvBuffer, 0, sizeof(recvBuffer));
+  recvBytes = recv(socketFD, &recvBuffer, BUFFERSIZE, 0);
+  if (recvBytes == -1)
+  {
+    return 6;
   }
-  else if(sv == 0)
+  else if(recvBytes == 0)
   {
     fprintf(stderr, "Recieved 0 bytes\n");
-    return 9;
+    return 6;
   }
-  else 
+  else if(recvBytes == 1)
   {
-    printf("[%s]\n", buff);
+    #ifdef DEBUG 
+    printf("Recieved: %d bytes\n", recvBytes);
+    #endif 
   }
+  else
+  {
+    printf("%s\n", recvBuffer);
+  }
+  
   close(socketFD);
 
   return 0;
