@@ -140,12 +140,7 @@ int main(int argc, char *argv[]){
     fprintf(stderr, "Recieved 0 bytes\n");
     return 6;
   }
-  else 
-  {
-    #ifdef DEBUG 
-    printf("Recieved: %d bytes\n", recvBytes);
-    #endif 
-  }
+
   printf("%s\n", recvBuffer);
   char* operand;
   char* firstValue;
@@ -259,6 +254,8 @@ int main(int argc, char *argv[]){
     printf("%s\n", recvBuffer);
   }
   
+  printf("Disconnected\n");
+
   close(socketFD);
 
   return 0;
