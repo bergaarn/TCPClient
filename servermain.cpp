@@ -96,7 +96,7 @@ int main(int argc, char *argv[]){
 
   // Listen to incoming connections on IP:PORT
   #ifdef DEBUG
-  printf("Listening to %s:%d\n", inet_ntoa(servAddr.sin_addr), servPortInt);
+  printf("Listening to %s:%d\n\n", inet_ntoa(servAddr.sin_addr), servPortInt);
   #endif
 
   int clientBacklog = 5;
@@ -121,6 +121,8 @@ int main(int argc, char *argv[]){
   // Loop to accept incoming client calls
   while(1)
   {
+    printf("Waiting for new client...\n");
+
     clientSockFD = accept(sockFD, (sockaddr*)&clientAddr, &clientLen);
     if(clientSockFD == -1)
     {
@@ -164,6 +166,10 @@ int main(int argc, char *argv[]){
       if(rv == -1)
       {
         perror("Error Recieving");
+        memset(&buff, 0, sizeof(buff));
+        sprintf(buff, "ERROR TO\n");
+
+        sv = send(clientSockFD, &buff, sizeof(buff), 0);
         break;
       }
       else if(rv == 0)
@@ -272,18 +278,16 @@ int main(int argc, char *argv[]){
         printf("Sent 0 Bytes.\n");
         break;
       }
-      else
-      {
-        #ifdef DEBUG
-        printf("Mathematical operation sent.\n");
-        #endif
-      }
 
       memset(&buff, 0, sizeof(buff));
       rv = recv(clientSockFD, &buff, sizeof(buff), 0);
       if(rv == -1)
       {
-        perror("recv client answer");
+        perror("Second Timeout");
+        memset(&buff, 0, sizeof(buff));
+        sprintf(buff, "ERROR TO\n");
+
+        sv = send(clientSockFD, &buff, sizeof(buff), 0);
         break;
       }
       else if(rv == 0)
@@ -308,18 +312,10 @@ int main(int argc, char *argv[]){
 
           if(diff < 0.0001)
           {
-            #ifdef DEBUG
-            printf("Equal D\n");
-            #endif
-
             equal = true;
           }
           else 
           {
-            #ifdef DEBUG
-            printf("Not Equal D\n");
-            #endif
-
             equal = false;
           }
         }
@@ -333,18 +329,10 @@ int main(int argc, char *argv[]){
           
           if(clientInt == rInt)
           {
-            #ifdef DEBUG
-            printf("Equal I\n");
-            #endif
-
             equal = true;
           }
           else 
           {
-            #ifdef DEBUG
-            printf("Not Equal I\n");
-            #endif
-
             equal = false;
           }
         }
